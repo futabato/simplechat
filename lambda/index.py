@@ -102,7 +102,8 @@ def lambda_handler(event, context):
                 resp_body = json.loads(resp.read().decode('utf-8'))
         except urllib.error.HTTPError as e:
             raise Exception(f"HTTP error: {e.code} - {e.reason}")
-
+        
+        print("Response from FastAPI:", resp_body)
         if "generated_test" not in resp_body:
             raise Exception("Invalid response format from FastAPI")
         assistant_response = resp_body["generated_test"]
