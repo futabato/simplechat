@@ -73,11 +73,6 @@ def lambda_handler(event, context):
                     "content": [{"text": msg["content"]}]
                 })
 
-        # payload = json.dumps({
-        #     "message": message,
-        #     "conversationHistory": conversation_history,
-        # }).encode('utf-8')
-
         payload_dict = {
             "prompt": message,
             "max_new_tokens": 512,
@@ -105,7 +100,7 @@ def lambda_handler(event, context):
         
         print("Response from FastAPI:", resp_body)
         try:
-            assistant_response = resp_body["generated_test"]
+            assistant_response = resp_body["generated_text"]
             response_time = resp_body["response_time"]
         except KeyError:
             raise Exception("Invalid response format from FastAPI")
