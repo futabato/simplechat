@@ -103,9 +103,11 @@ def lambda_handler(event, context):
         except urllib.error.HTTPError as e:
             raise Exception(f"HTTP error: {e.code} - {e.reason}")
 
-        if not resp_body.get('success'):
-            raise Exception(f"FastAPI Error: {resp_body['error']}")
-        assistant_response = resp_body['response']
+        if "generated_test" not in resp_body:
+            raise Exception("Invalid response format from FastAPI")
+        assistant_response = resp_body["generated_test"]
+        response_time = resp_body["response_time"]
+        print(f"Response time: {response_time} seconds")
 
         # アシスタントの応答を会話履歴に追加
         messages.append({
