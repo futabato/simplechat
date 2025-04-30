@@ -1,8 +1,11 @@
 # lambda/index.py
 import json
 import os
-import boto3
+import urllib.request
+import urllib.error
 import re  # 正規表現モジュールをインポート
+
+import boto3
 from botocore.exceptions import ClientError
 
 
@@ -19,6 +22,7 @@ bedrock_client = None
 
 # モデルID
 MODEL_ID = os.environ.get("MODEL_ID", "us.amazon.nova-lite-v1:0")
+API_URL = ""
 
 def lambda_handler(event, context):
     try:
@@ -68,38 +72,31 @@ def lambda_handler(event, context):
                     "role": "assistant", 
                     "content": [{"text": msg["content"]}]
                 })
-        
-        # invoke_model用のリクエストペイロード
-        request_payload = {
-            "messages": bedrock_messages,
-            "inferenceConfig": {
-                "maxTokens": 512,
-                "stopSequences": [],
-                "temperature": 0.7,
-                "topP": 0.9
+
+        payload = json.dumps({
+            "message": message,
+            "conversationHistory": conversation_history,
+        }).encode('utf-8')
+
+        req = urllib.request.Request(
+            API_URL,
+            method='POST',
+            data=payload,
+            headers={
+                'Content-Type': 'application/json',
             }
-        }
-        
-        print("Calling Bedrock invoke_model API with payload:", json.dumps(request_payload))
-        
-        # invoke_model APIを呼び出し
-        response = bedrock_client.invoke_model(
-            modelId=MODEL_ID,
-            body=json.dumps(request_payload),
-            contentType="application/json"
         )
-        
-        # レスポンスを解析
-        response_body = json.loads(response['body'].read())
-        print("Bedrock response:", json.dumps(response_body, default=str))
-        
-        # 応答の検証
-        if not response_body.get('output') or not response_body['output'].get('message') or not response_body['output']['message'].get('content'):
-            raise Exception("No response content from the model")
-        
-        # アシスタントの応答を取得
-        assistant_response = response_body['output']['message']['content'][0]['text']
-        
+
+        try:
+            with urllib.request.urlopen(req) as resp:
+                resp_body = json.loads(resp.read().decode('utf-8'))
+        except urllib.error.HTTPError as e:
+            raise Exception(f"HTTP error: {e.code} - {e.reason}")
+
+        if not resp_body.get('success'):
+            raise Exception(f"FastAPI Error: {resp_body['error']}")
+        assistant_response = resp_body['response']
+
         # アシスタントの応答を会話履歴に追加
         messages.append({
             "role": "assistant",
